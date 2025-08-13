@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Radio España — Modo Compatible</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #111; color: #fff; margin: 0; padding: 0; }
+  .container { max-width: 500px; margin: auto; padding: 20px; }
+  h1 { text-align: center; }
+  input, select, button { width: 100%; padding: 10px; margin: 5px 0; border: none; border-radius: 5px; font-size: 16px; }
+  select, input { background: #222; color: #fff; }
+  button { background: #28a745; color: #fff; cursor: pointer; }
+  button:disabled { background: #555; }
+  audio { width: 100%; margin-top: 10px; }
+  .status { font-size: 0.9rem; margin-top: 8px; color: #cfe4ff; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>📻 Radios de España</h1>
+
+  <label for="stationSelect">Emisora</label>
+  <select id="stationSelect" size="8" style="height:200px"></select>
+
+  <input type="text" id="searchBox" placeholder="Filtrar emisoras por nombre..." />
+
+  <button id="playBtn" disabled>▶ Reproducir</button>
+  <audio id="audio" controls playsinline webkit-playsinline></audio>
+  <div class="status" id="status">Estado: listo.</div>
+</div>
+
+<script>
+// Lista filtrada de emisoras españolas compatibles con iPhone 6
+var stations = [
+  {name: "Cadena SER", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/CADENASER.mp3"},
+  {name: "Los 40", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/LOS40.mp3"},
+  {name: "COPE", url: "https://flucast09-h-cloud.flumotion.com/cope/net1.mp3"},
+  {name: "COPE MAS SEVILLA", url: "https://wecast18-h-cloud.flumotion.com/copesedes/sevilla.mp3"},
+  {name: "RADIO BETIS", url: "https://comcast04-h-cloud.flumotion.com/betistv/radio1.mp3"},
+  {name: "Canal Sur Radio", url: "https://rtva-live-radio.flumotion.com/rtva/csr.mp3"},
+  {name: "Canal Fiesta Radio", url: "https://rtva-live-radio.flumotion.com/rtva/cfr.mp3"},
+  {name: "Kiss FM", url: "https://kissfm.kissfmradio.cires21.com/kissfm.mp3"},
+  {name: "Radiolé", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOLE.mp3"},
+  {name: "Radio Marca", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/RADIOMARCA_NACIONAL.mp3"},
+  {name: "EsRadio", url: "https://libertaddigital-radio-live1.flumotion.com/libertaddigital/ld-live1-high.mp3"}
+];
+
+var stationSelect = document.getElementById('stationSelect');
+var searchBox = document.getElementById('searchBox');
+var playBtn = document.getElementById('playBtn');
+var audio = document.getElementById('audio');
+var status = document.getElementById('status');
+
+function populateStations(filter) {
+  stationSelect.innerHTML = '';
+  var term = (filter || '').toLowerCase();
+  var filtered = stations.filter(function(s) {
+    return !term || s.name.toLowerCase().indexOf(term) !== -1;
+  });
+  if (filtered.length === 0) {
+    var opt = document.createElement('option');
+    opt.textContent = '— sin resultados —';
+    opt.disabled = true;
+    stationSelect.appendChild(opt);
+    playBtn.disabled = true;
+    return;
+  }
+  filtered.forEach(function(st) {
+    var opt = document.createElement('option');
+    opt.value = st.url;
+    opt.textContent = st.name;
+    stationSelect.appendChild(opt);
+  });
+  playBtn.disabled = false;
+}
+
+searchBox.addEventListener('input', function(){
+  populateStations(searchBox.value);
+});
+
+stationSelect.addEventListener('change', function(){
+  playBtn.disabled = !stationSelect.value;
+});
+
+playBtn.addEventListener('click', function(){
+  var url = stationSelect.value;
+  if (!url) {
+    alert('Selecciona una emisora válida.');
+    return;
+  }
+  playUrl(url, stationSelect.options[stationSelect.selectedIndex].text);
+});
+
+function playUrl(url, stationName) {
+  stopPlayback();
+  status.textContent = 'Intentando reproducir: ' + stationName;
+
+  var isHls = url.indexOf('.m3u8') !== -1;
+  var canPlayHlsNatively = audio.canPlayType('application/vnd.apple.mpegurl') || audio.canPlayType('application/x-mpegURL');
+
+  try {
+    if (isHls && !canPlayHlsNatively) {
+      status.textContent = 'Este stream no es compatible con tu dispositivo.';
+      return;
+    }
+    audio.src = url;
+    audio.preload = 'none';
+    audio.play();
+    status.textContent = 'Reproduciendo: ' + stationName;
+  } catch (err) {
+    console.log('Error al reproducir', err);
+    status.textContent = 'Error al reproducir. Puede ser CORS o geobloqueo.';
+  }
+}
+
+function stopPlayback() {
+  try { audio.pause(); audio.removeAttribute('src'); audio.load(); } catch(e){}
+}
+
+// Inicializar lista
+populateStations('');
+</script>
+</body>
+</html>
